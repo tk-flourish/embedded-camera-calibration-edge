@@ -1,7 +1,28 @@
+"""Minimal length-prefixed TCP framing between the calibration host and the
+capture server.
+
+Each message is a 4-byte big-endian length followed by that many payload bytes.
+A request payload is a 4-byte command length, the command string, then the
+command's binary argument.
+"""
 
 import socket
 
+class ByteReader:
+    """Sequentially read big-endian uint32 values from a byte buffer."""
+
+    def __init__(self, data: bytes) -> None:
+        self._data = data
+        self._cursor = 0
+
+    def read_u32(self) -> int:
+        value = int.from_bytes(self._data[self._cursor:self._cursor + 4], 'big')
+        self._cursor += 4
+        return value
+
 class Request:
+    """A decoded request: a command string and its binary payload."""
+
     command: str
     data: bytes
 
@@ -10,6 +31,8 @@ class Request:
         self.data = argument
 
 class ClientConnection:
+    """One accepted client socket, framed as length-prefixed messages."""
+
     _socket: socket.socket
 
     def __init__(self, _socket: socket.socket) -> None:
@@ -22,23 +45,26 @@ class ClientConnection:
         self._socket.close()
 
     def read_raw(self) -> bytes | None:
+        """Read one length-prefixed frame; return None if the peer closed."""
         length_raw = self._socket.recv(4)
         if length_raw == b'': return None
         length = int.from_bytes(length_raw, 'big')
         return self._socket.recv(length)
-    
+
     def read(self) -> Request | None:
+        """Read one frame and split it into a command and its payload."""
         raw_data = self.read_raw()
         if raw_data == None: return None
         command_len = int.from_bytes(raw_data[0:4], 'big')
         command = raw_data[4:(command_len + 4)].decode()
         return Request(command, raw_data[(command_len + 4):])
 
-    def send_raw(self, data: bytes) -> str:
+    def send_raw(self, data: bytes) -> None:
         self._socket.sendall(len(data).to_bytes(4, 'big'))
         self._socket.sendall(data)
 
     def send(self, status: str, data: bytes = bytes([])):
+        """Send a reply: a status string followed by optional binary data."""
         send_data = bytearray([])
         status_bytes = bytes(status, 'utf-8')
         send_data.extend(len(status_bytes).to_bytes(4, 'big'))
@@ -47,19 +73,21 @@ class ClientConnection:
         self.send_raw(bytes(send_data))
 
 class ServerStream:
+    """Listening server socket that yields ClientConnections via accept()."""
+
     _socket: socket.socket
 
     def __init__(self, port: int) -> None:
         self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self._socket.bind(("0.0.0.0", port))
         self._socket.listen()
-        
+
     def __enter__(self):
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
         self._socket.close()
-    
+
     def accept(self) -> tuple[ClientConnection, tuple[str, int]]:
         conn, addr = self._socket.accept()
         return (ClientConnection(conn), addr)

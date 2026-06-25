@@ -1,0 +1,17 @@
+# Test-only dependencies (run off-device, no Raspberry Pi hardware).
+#
+# picamera2 / libcamera are Pi-only and are stubbed in conftest.py, so they are
+# intentionally absent here. opencv-python-headless stands in for the runtime's
+# opencv-python (no GUI needed for tests).
+#
+# Requires Python 3.10+ (connection.py uses PEP 604 `X | None` annotations).
+#
+#   python3.13 -m venv .venv && . .venv/bin/activate
+#   pip install -r requirements-dev.txt
+#   pytest
+
+numpy
+scipy
+opencv-python-headless
+pillow
+pytest
