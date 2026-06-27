@@ -10,7 +10,8 @@ It is the embedded-device component of the system behind
 [*"Breaking the Scalability Limit of Multi-Projector Calibration with Embedded
 Cameras"*](https://cvpr.thecvf.com/virtual/2026/oral/40265) (CVPR 2026, oral).
 The calibration core (parameter estimation, optical-center homography) runs on a
-separate machine.
+separate machine — the
+[`embedded-camera-calibration`](https://github.com/tk-flourish/embedded-camera-calibration) host.
 
 > **License:** source-available, **All Rights Reserved** (patent pending).
 > See [LICENSE](LICENSE).
